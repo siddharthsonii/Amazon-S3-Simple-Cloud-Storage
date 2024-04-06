@@ -117,6 +117,18 @@ The API provides the following endpoints:
       - **Description:** Adds metadata to a file.
       - **Request:** JSON object containing metadata key-value pairs.
       - **Response:** Success message or error details.
+     
+    - **Endpoint:** /api/files/usage-analytics
+      - **Method:** GET
+      - **Description:** Retrieves usage analytics related to storage usage, types of files stored, and file download frequency for the authenticated user.
+      - **Request:** JWT token (in the Authorization header)
+      - **Response:** Success message or error details.
+        
+    - **Endpoint:** /api/files/delete
+      - **Method:** DELETE
+      - **Description:** Deletes a file or directory.
+      - **Request:** JSON object containing type (file or directory) and ids (file IDs or directory IDs) in array.
+      - **Response:** Success message or error details.
 
 3. **Directory Management APIs -**
     - **Endpoint:** /api/directories/create
@@ -142,7 +154,6 @@ The API provides the following endpoints:
       - **Description:** Moves a file or directory to another directory.
       - **Request:** JSON object containing file or directory ID and destination directory ID.
       - **Response:** Success message or error details.
-
 
 ## **Folder Structure**
     Amazon-S3-Simple-Cloud-Storage/
