@@ -17,10 +17,10 @@ module.exports = (sequelize, DataTypes) => {
       },
       parent_directory_id: {
         type: DataTypes.INTEGER,
-        allowNull: true, // Nullable as the root directory won't have a parent
+        allowNull: true,
         references: {
-          model: 'directories', // Referencing the same model
-          key: 'directory_id' // Referencing the primary key of the Directory model
+          model: 'directories',
+          key: 'directory_id'
         }
       },
       directory_name: {
@@ -44,17 +44,13 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       timestamps: true,
-      createdAt: false,
-      // updatedAt: 'updateTimestamp'
+      createdAt: false
     }
   );
 
   // Define associations
   Directory.hasMany(Directory, { as: 'subDirectories', foreignKey: 'parent_directory_id' });
   Directory.belongsTo(Directory, { as: 'parentDirectory', foreignKey: 'parent_directory_id' });
-
-  // `sequelize.define` also returns the model
-  // console.log(Directory === sequelize.models.Directory); // true
 
   return Directory;
 };
