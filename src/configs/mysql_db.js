@@ -31,16 +31,12 @@ db.file.belongsTo(db.directory, { foreignKey: "directory_id" });
 
 db.directory.belongsTo(db.user, { foreignKey: "user_id" });
 
-// db.permission.belongsTo(db.file, { foreignKey: "file_id" });
 db.file.hasMany(db.permission, { foreignKey: 'file_id' });
-// db.permission.belongsTo(db.user, { foreignKey: "user_id" });
 db.user.hasMany(db.permission, { foreignKey: 'user_id' });
 
-// db.fileVersion.belongsTo(db.file, { foreignKey: "file_id" });
 db.file.hasMany(db.fileVersion, { foreignKey: 'file_id' });
 db.fileVersion.belongsTo(db.file, { foreignKey: 'file_id' });
 
-// db.fileMetadata.belongsTo(db.file, { foreignKey: "file_id" });
 db.file.hasMany(db.fileMetadata, { foreignKey: 'file_id' });
 db.fileMetadata.belongsTo(db.file, { foreignKey: 'file_id' });
 

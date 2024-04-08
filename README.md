@@ -192,7 +192,7 @@ The API provides the following endpoints:
     │
     ├── package.json
     │
-    ├── README.md
+    └── README.md
 
 ## **Dependencies**
 - Express - Web framework for Node.js servers

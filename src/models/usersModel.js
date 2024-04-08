@@ -52,18 +52,13 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         allowNull: false,
         defaultValue: DataTypes.NOW
-        // defaultValue: sequelize.literal('NOW()'),
       }
     },
     {
       timestamps: true,
-      createdAt: false,
-      // updatedAt: 'updateTimestamp'
+      createdAt: false
     }
   );
-
-  // `sequelize.define` also returns the model
-  // console.log(User === sequelize.models.User); // true
 
   return User;
 };

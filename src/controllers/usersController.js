@@ -1,15 +1,38 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 var db = require("../configs/mysql_db");
-var User = db.user; // Return the user model (Return Table Name i.e., users)
-const verifyToken = require('../middlewares/authJWT'); // Import the token verification middleware
-const blacklist = verifyToken.blacklist; // Import the blacklist array
+const verifyToken = require('../middlewares/authJWT');
+const blacklist = verifyToken.blacklist;
+var User = db.user;
 
+/**
+ * Registers a new user.
+ * 
+ * Endpoint: POST /api/auth/register
+ * 
+ * @param {object} req - The request object containing username, email, and password in JSON format.
+ * @param {object} res - The response object.
+ * @returns {object} Success message or error details.
+ */
 var registerUser = async (req, res) => {
   try {
-    // Extract user data from request body
     const { username, email, password } = req.body;
-    // process.exit(1);
+
+    // Check if username contains spaces
+    if (username.includes(' ')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username should not contain spaces'
+      });
+    }
+
+    // Check if password contains spaces
+    if (password.includes(' ') || password.length == 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid password, try using another password'
+      });
+    }
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -36,9 +59,17 @@ var registerUser = async (req, res) => {
   }
 };
 
+/**
+ * Logs in an existing user.
+ * 
+ * Endpoint: POST /api/auth/login
+ * 
+ * @param {object} req - The request object containing email and password in JSON format.
+ * @param {object} res - The response object.
+ * @returns {object} Success message with a JWT token if login is successful, or error details.
+ */
 var loginUser = async (req, res) => {
   try {
-    // Extract user data from request body
     const { email, password } = req.body;
 
     // Find the user by email
@@ -85,14 +116,19 @@ var loginUser = async (req, res) => {
   }
 };
 
+/**
+ * Logs out a user by blacklisting their token.
+ * 
+ * Endpoint: POST /api/auth/logout
+ * 
+ * @param {object} req - The request object containing the token in the authorization header.
+ * @param {object} res - The response object.
+ * @returns {object} Success message or error details.
+ */
 var logoutUser = (req, res) => {
   try {
-    console.log(blacklist);
-
     // Blacklist the token
     blacklist.push(req.headers.authorization);
-    console.log(blacklist);
-    // process.exit(1);
 
     res.status(200).json({
       success: true,

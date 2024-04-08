@@ -1,6 +1,6 @@
 const express = require('express');
 const files = require('../controllers/filesController');
-const authJWT = require('../middlewares/authJWT'); // Import the token verification middleware
+const authJWT = require('../middlewares/authJWT');
 const verifyToken = authJWT.verifyToken;
 const multer = require('multer');
 const fs = require('fs');
@@ -21,9 +21,7 @@ if (!fs.existsSync(uploadsFolder)) {
 // Set up multer storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // cb(null, 'uploads/'); // Save files to the "uploads" directory
-    // Get the user ID from the request object (assuming it's stored in req.user)
-    const userId = req.user; // Assuming req.user contains user object with id property
+    const userId = req.user;
     const userUploadsFolder = `${uploadsFolder}/user_${userId}`;
 
     // Check if the user's uploads folder exists
@@ -36,14 +34,45 @@ const storage = multer.diskStorage({
     cb(null, userUploadsFolder);
   },
   filename: function (req, file, cb) {
-    // cb(null, Date.now() + '-' + file.originalname); // Set filename to current timestamp + original filename
     cb(null, file.originalname);
   }
 });
-const upload = multer({ storage: storage });
+
+// Set up multer configuration with custom error message for exceeding file upload limit
+const upload = multer({
+  storage: storage,
+  limits: {
+    // fileSize: 10 * 1024 * 1024, // 10 MB file size limit
+    files: 10, // Maximum 10 files allowed
+  },
+  fileFilter: function (req, file, cb) {
+    // Custom file filter logic (if needed)
+    cb(null, true);
+  },
+}).array('files');
+// const upload = multer({ storage: storage });
+
+// Middleware to handle file upload
+const handleFileUpload = (req, res, next) => {
+  upload(req, res, function (err) {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_COUNT') {
+        return res.status(400).json({ success: false, message: 'Cannot upload more than 10 files at once.' });
+      }
+      // Handle other Multer errors (if needed)
+    } else if (err) {
+      // Handle other errors (if needed)
+      console.error(err);
+      return res.status(500).json({ success: false, message: 'Internal server error.' });
+    }
+    // Proceed to the next middleware if no errors
+    next();
+  });
+};
 
 // Route for uploading a file to the user's storage space.
-router.post('/upload', verifyToken, upload.array('files', 10), files.uploadFile);
+// router.post('/upload', verifyToken, upload.array('files', 10), files.uploadFile);
+router.post('/upload', verifyToken, handleFileUpload, files.uploadFile);
 
 // Route for downloading a file by its ID.
 router.get('/download/:fileId', verifyToken, files.downloadFile); // Permission
@@ -68,5 +97,11 @@ router.put('/:fileId/versions/:versionId/restore', verifyToken, files.restoreFil
 
 // Route for adding metadata to a file.
 router.post('/:fileId/metadata', verifyToken, files.addFileMetadata);
+
+// Route for retrieving usage analytics.
+router.get('/usage-analytics', verifyToken, files.getUsageAnalytics);
+
+// Route for deleting files or directories.
+router.delete('/delete', verifyToken, files.deleteFilesOrDirectories);
 
 module.exports = router;

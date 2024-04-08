@@ -64,46 +64,21 @@ module.exports = (sequelize, DataTypes) => {
           }
         }
       },
-      is_deleted: {
+      priority_version: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false
+      },
+      download_count: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
       }
     },
     {
       timestamps: true,
-      createdAt: false,
-      // updatedAt: 'updateTimestamp'
+      createdAt: false
     }
   );
-
-  // `sequelize.define` also returns the model
-  // console.log(File === sequelize.models.File); // true
-
-  // File.updatePermissions = async (fileId, permission) => {
-  //   try {
-  //     console.log('yes');
-  //     const Permission = require('../models/permissionsModel'); // Assuming you have defined the Permission model
-  //     console.log(Permission);
-  //     process.exit(1);
-
-  //     // Check if permissions exist for the fileId
-  //     const existingPermissions = await Permission.findOne({ where: { file_id: fileId } });
-
-  //     if (existingPermissions) {
-  //       // If permissions exist, update them
-  //       await Permission.update(permission, { where: { file_id: fileId } });
-  //     } else {
-  //       // If permissions don't exist, create new permissions
-  //       await Permission.create({ file_id: fileId, ...permission });
-  //     }
-
-  //     return true; // Return true indicating success
-  //   } catch (error) {
-  //     console.error(error);
-  //     return false; // Return false indicating failure
-  //   }
-  // };
 
   return File;
 };

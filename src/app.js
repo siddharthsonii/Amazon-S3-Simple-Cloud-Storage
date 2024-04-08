@@ -3,8 +3,6 @@ const bodyParser = require('body-parser');
 require('./configs/mysql_db');
 require('dotenv').config();
 const path = require('path');
-// const userAuth = require('./middlewares/authJWT');
-// console.log(userAuth.userID)
 
 // ---- Routes -----
 const usersRouter = require('./routes/usersRoutes');

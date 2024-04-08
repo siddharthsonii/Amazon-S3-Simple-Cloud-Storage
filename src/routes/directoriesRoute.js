@@ -1,6 +1,6 @@
 const express = require('express');
 const directories = require('../controllers/directoriesController');
-const authJWT = require('../middlewares/authJWT'); // Import the token verification middleware
+const authJWT = require('../middlewares/authJWT');
 const verifyToken = authJWT.verifyToken;
 
 const router = express.Router();
