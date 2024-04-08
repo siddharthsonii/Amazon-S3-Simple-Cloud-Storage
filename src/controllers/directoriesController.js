@@ -188,27 +188,27 @@ exports.moveFileOrDirectory = async (req, res) => {
 
       // Find the item (file or directory) by its ID
       let item;
-      if (itemType.toLowerCase() === 'file') {
-          item = await File.findOne({ where: { file_id: itemId, user_id: req.user } });
-      } else if (itemType.toLowerCase() === 'directory') {
-          item = await Directory.findOne({ where: { directory_id: itemId, user_id: req.user } });
+      if (itemType.trim().toLowerCase() === 'file') {
+          item = await File.findOne({ where: { file_id: parseInt(itemId), user_id: req.user } });
+      } else if (itemType.trim().toLowerCase() === 'directory') {
+          item = await Directory.findOne({ where: { directory_id: parseInt(itemId), user_id: req.user } });
       } else {
         return res.status(400).json({ success: false, message: 'Invalid type. Must be "file" or "directory".' });
       }
 
       if (!item) {
-          return res.status(404).json({
-              success: false,
-              message: `${itemType.charAt(0).toUpperCase() + itemType.slice(1)} not found`
-          });
+        return res.status(404).json({
+            success: false,
+            message: `${itemType.charAt(0).toUpperCase() + itemType.slice(1)} not found`
+        });
       }
 
-      if (itemType.toLowerCase() === 'file') {
+      if (itemType.trim().toLowerCase() === 'file') {
         // Update the item's directory_id with the new destinationDirectoryId
-        item.directory_id = destinationDirectoryId;
-      } else if (itemType.toLowerCase() === 'directory'){
+        item.directory_id = parseInt(destinationDirectoryId);
+      } else if (itemType.trim().toLowerCase() === 'directory'){
         // Update the directory's parent_directory_id with the new destinationDirectoryId
-        item.parent_directory_id = destinationDirectoryId;
+        item.parent_directory_id = parseInt(destinationDirectoryId);
       }
       await item.save();
 

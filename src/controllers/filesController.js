@@ -8,10 +8,26 @@ var FileVersion = db.fileVersion;
 var FileMetadata = db.fileMetadata;
 var User = db.user;
 
+/**
+ * Uploads a file to the server.
+ * 
+ * Endpoint: POST /api/files/upload
+ * 
+ * @param {object} req - The request object containing file details.
+ * @param {object} res - The response object.
+ * @returns {object} Success message or error details.
+ */
 exports.uploadFile = async (req, res) => {
   try {
     // Extract file details from multer's req.file object
     const { folder_name, folder_path } = req.body;
+
+    if((!folder_name || folder_name.trim().length == 0) || (!folder_path || folder_path.trim().length == 0)){
+      return res.status(404).json({
+        success: false,
+        message: "Folder name or folder path is invalid"
+      });
+    }
 
     // Checing the folder name and folder path
     const folder_path_arr = folder_path.split("/");
@@ -45,10 +61,14 @@ exports.uploadFile = async (req, res) => {
           __dirname, "..", "..", "uploads", `user_${userId}`
         );
         const filePath = path.join(uploadsFolderPath, filename);
+
+        //Find the index of the last hyphen 
+        const lastHyphenIndex = (filename).lastIndexOf('-');
+        const originalFilename = (filename).substring(0, lastHyphenIndex);
   
         // Check if a file with the same name already exists in the directory
         let existingFile = await File.findOne({
-          where: { file_name: filename, directory_id: directory.directory_id }
+          where: { file_name: originalFilename, directory_id: directory.directory_id }
         });
 
         if (existingFile && existingFile.length != 0) {
@@ -176,7 +196,7 @@ exports.uploadFile = async (req, res) => {
       }
       return res.status(404).json({
         success: false,
-        message: "Folder Name in Folder Path does not match"
+        message: "Folder name in folder path does not match"
       });
     }
   } catch (error) {
@@ -204,12 +224,12 @@ exports.downloadFile = async (req, res) => {
     const userId = req.user;
     let requestedfile;
 
-    // Find the file in the database by fileId and user_id
+    // Find the file in the database by fileId and user_id (For current user)
     const file = await File.findOne({
       where: { file_id: fileId, user_id: userId }
     });
 
-    // If the file does not exist or does not belong to the user, return 404 Not Found
+    // If the file does not exist or does not belong to the user
     if (!file) {
       // Find file by fileId
       requestedfile = await File.findOne({
@@ -222,12 +242,18 @@ exports.downloadFile = async (req, res) => {
         where: { file_id: fileId }
       });
 
+      if(!permissionDetails || typeof permissionDetails == null){
+        return res.status(404).json({
+          success: false,
+          message:
+            "File not found or user don't have permission to view this file"
+        });
+      }
       const permissionType = permissionDetails.permission_type;
       const permissionEmail = permissionDetails.shared_with.split(", ");
 
       // Allow file download to Public or Shared Permission Holders
-      if (permissionType !== "Public" && (!permissionEmail || !permissionEmail.includes(req.email))
-      ) {
+      if (permissionType !== "Public" && (!permissionEmail || !permissionEmail.includes(req.email))) {
         return res.status(404).json({
           success: false,
           message:
@@ -245,8 +271,12 @@ exports.downloadFile = async (req, res) => {
     // Extract the substring before the last backslash
     const realFilePath = filePath.substring(0, lastIndex);
 
+    //Find the index of the last hyphen 
+    const lastHyphenIndex = (file.file_name).lastIndexOf('-');
+    const originalFilename = (file.file_name).substring(0, lastHyphenIndex);
+
     // Stream the file to the client for download
-    res.download(realFilePath, file ? file.file_name : requestedfile.file_name);
+    res.download(realFilePath, file ? originalFilename : requestedfile.file_name);
 
     if(file) {
       file.download_count = file.download_count + 1;
@@ -277,7 +307,14 @@ exports.listFiles = async (req, res) => {
     const userId = req.user;
 
     // Find all files uploaded by the user
-    const files = await File.findAll({ where: { user_id: userId } });
+    const files = await File.findAll({ where: { user_id: userId , priority_version: true} });
+
+    if(!files) {
+      return res.status(404).json({
+        success: false,
+        message: "Files not found"
+      });
+    }
 
     // Respond with the list of files
     res.status(200).json({
@@ -315,6 +352,7 @@ exports.searchFiles = async (req, res) => {
     const filesByFilename = await File.findAll({
       where: {
         user_id: userId,
+        priority_version: true,
         file_name: { [db.Sequelize.Op.like]: `%${keyword}%` }
       }
     });
@@ -324,7 +362,7 @@ exports.searchFiles = async (req, res) => {
       where: {
         metadata_value: { [db.Sequelize.Op.like]: `%${keyword}%` }
       },
-      include: [{ model: File, as: "file", where: { user_id: userId } }]
+      include: [{ model: File, as: "file", where: { user_id: userId, priority_version: true } }]
     });
 
     // Map the metadataFiles to include both the File model and the metadata object
@@ -375,14 +413,31 @@ exports.setFilePermissions = async (req, res) => {
     const currentUserEmail = req.email;
 
     let updatedPermissionStr = permission.charAt(0).toUpperCase() + permission.slice(1);
+
+    if((!shared_with_user || shared_with_user.length == 0) || updatedPermissionStr.trim().length == 0){
+      res.status(400).json({
+        success: false,
+        message: 'Incorrect body or field missing'
+      });
+    }
+
+    let fileExistance = await File.findOne({where : { user_id: req.user, file_id: fileId }});
+    if(!fileExistance || typeof fileExistance == null){
+      res.status(404).json({
+        status: false,
+        message: "No file found with the provided fileId or file don't belongs to the user"
+      });
+    }
     
     // Update permissions for the file in the database
-    var result = await updateFilePermissions(
-      fileId,
-      updatedPermissionStr,
-      shared_with_user,
-      currentUserEmail
-    );
+    var result = await updateFilePermissions(fileId, updatedPermissionStr, shared_with_user, currentUserEmail);
+
+    if(result && result[0].length == 0 && result[1].length == 0){
+      res.status(200).json({
+        success: true,
+        message: `Permissions updated successfully updated`
+      });
+    }
 
     // Respond with success message
     if (updatedPermissionStr === "Private" || updatedPermissionStr === "Public") {
@@ -394,7 +449,7 @@ exports.setFilePermissions = async (req, res) => {
       res.status(200).json({
         success: true,
         message: `Permissions updated successfully for these emails - ${result[0]}`,
-        email_not_found: `Permission NOT updated for these emails - ${result[1]}`
+        email_not_found: `Permission not updated for these emails - ${result[1]}`
       });
     }
   } catch (error) {
@@ -422,6 +477,12 @@ const updateFilePermissions = async (fileId, permission, shared_with_user, curre
         }
       });
 
+      if(!usersData || usersData.length == 0){
+        throw new Error(
+          "No user found with the provided email address in the database"
+        );
+      }
+
       const existingEmails = usersData.map(user => user.email);
       const missingEmails = userEmails.filter(email => !existingEmails.includes(email));
 
@@ -431,6 +492,11 @@ const updateFilePermissions = async (fileId, permission, shared_with_user, curre
 
       // Remove email of current user if found
       emailString = result.replace(currentUserEmail + ", ", "");
+
+      if(currentUserEmail.trim() == result.trim()){
+        permission = "Private",
+        emailString = "";
+      }
 
       // Update file permissions
       await filePermission.update({
@@ -486,7 +552,7 @@ exports.getAllFileVersion = async (req, res) => {
     if (!fileVersions || fileVersions.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "No versions found for the specified file"
+        message: "No versions found for the specified file or file not found"
       });
     }
 
@@ -528,7 +594,7 @@ exports.getFileVersion = async (req, res) => {
     if (!fileVersion) {
       return res.status(404).json({
         success: false,
-        message: "File version not found"
+        message: "File version or file not found"
       });
     }
 
@@ -559,6 +625,13 @@ exports.restoreFileVersion = async (req, res) => {
   try {
     const { fileId, versionId } = req.params;
 
+    if(fileId === versionId){
+      return res.status(404).json({
+        success: false,
+        message: "File version cannot be replaced with own file version"
+      });
+    }
+
     // Find the file version in the database by fileId and versionId
     const fileVersion = await FileVersion.findOne({
       where: { file_id: fileId, version_id: versionId }
@@ -568,7 +641,7 @@ exports.restoreFileVersion = async (req, res) => {
     if (!fileVersion) {
       return res.status(404).json({
         success: false,
-        message: "File version not found"
+        message: "File version or file not found "
       });
     }
 
@@ -749,7 +822,7 @@ exports.deleteFilesOrDirectories = async (req, res) => {
           return res.status(400).json({ success: false, message: 'Invalid request body.' });
       }
 
-      if (type.toLowerCase() === 'file') {
+      if (type.trim().toLowerCase() === 'file') {
         allFilesData = await File.findAll({ attributes: ["file_id", "file_name", "file_path"], where: {'file_id': ids} });
 
         if(allFilesData.length != 0){
@@ -762,7 +835,7 @@ exports.deleteFilesOrDirectories = async (req, res) => {
         } else {
           return res.status(404).json({ success: false, message: 'No files found.' });
         }
-      } else if (type.toLowerCase() === 'directory') {
+      } else if (type.trim().toLowerCase() === 'directory') {
         // Check whether directory exists or not
         directoryStatus = await Directory.findAll({ where: {directory_id: ids} });
         const parentDirectoryIdsArray = directoryStatus.map(directory => directory.parent_directory_id);

@@ -19,7 +19,7 @@ var registerUser = async (req, res) => {
     const { username, email, password } = req.body;
 
     // Check if username contains spaces
-    if (username.includes(' ')) {
+    if (username.includes(' ') || username.length == 0) {
       return res.status(400).json({
         success: false,
         message: 'Username should not contain spaces'
@@ -71,6 +71,22 @@ var registerUser = async (req, res) => {
 var loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    // Check if username contains spaces
+    if (email.includes(' ') || email.length == 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email'
+      });
+    }
+
+    // Check if username contains spaces
+    if (password.includes(' ') || password.length == 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid password'
+      });
+    }
 
     // Find the user by email
     const user = await User.findOne({ where: { email } });
