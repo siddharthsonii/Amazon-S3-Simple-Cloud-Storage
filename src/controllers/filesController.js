@@ -62,13 +62,13 @@ exports.uploadFile = async (req, res) => {
         );
         const filePath = path.join(uploadsFolderPath, filename);
 
-        //Find the index of the last hyphen 
-        const lastHyphenIndex = (filename).lastIndexOf('-');
-        const originalFilename = (filename).substring(0, lastHyphenIndex);
+        //Find the index of the first hyphen 
+        const firstHyphenIndex = filename.indexOf('-');
+        const originalFilename = filename.substring(firstHyphenIndex + 1);
   
         // Check if a file with the same name already exists in the directory
         let existingFile = await File.findOne({
-          where: { file_name: originalFilename, directory_id: directory.directory_id }
+          where: { file_name: originalFilename, directory_id: directory.directory_id, user_id: userId }
         });
 
         if (existingFile && existingFile.length != 0) {
@@ -81,7 +81,8 @@ exports.uploadFile = async (req, res) => {
 
           // Upload the same file at same directory with new version
           const uploadedFile = await File.create({
-            file_name: filename,
+            system_generated_file_name: filename,
+            file_name: originalFilename,
             directory_id: directory.directory_id,
             user_id: req.user,
             file_size: size,
@@ -131,7 +132,8 @@ exports.uploadFile = async (req, res) => {
         } else {
           // If no file with the same name exists, upload as a new file
           const uploadedFile = await File.create({
-            file_name: filename,
+            system_generated_file_name: filename,
+            file_name: originalFilename,
             directory_id: directory.directory_id,
             user_id: req.user,
             file_size: size,
@@ -271,17 +273,13 @@ exports.downloadFile = async (req, res) => {
     // Extract the substring before the last backslash
     const realFilePath = filePath.substring(0, lastIndex);
 
-    //Find the index of the last hyphen 
-    const lastHyphenIndex = (file.file_name).lastIndexOf('-');
-    const originalFilename = (file.file_name).substring(0, lastHyphenIndex);
-
-    // Stream the file to the client for download
-    res.download(realFilePath, file ? originalFilename : requestedfile.file_name);
-
     if(file) {
       file.download_count = file.download_count + 1;
       await file.save();
     }
+
+    // Stream the file to the client for download
+    res.download(realFilePath, file ? file.system_generated_file_name : requestedfile.file_name);
 
   } catch (error) {
     console.error(error);
@@ -625,13 +623,6 @@ exports.restoreFileVersion = async (req, res) => {
   try {
     const { fileId, versionId } = req.params;
 
-    if(fileId === versionId){
-      return res.status(404).json({
-        success: false,
-        message: "File version cannot be replaced with own file version"
-      });
-    }
-
     // Find the file version in the database by fileId and versionId
     const fileVersion = await FileVersion.findOne({
       where: { file_id: fileId, version_id: versionId }
@@ -647,7 +638,7 @@ exports.restoreFileVersion = async (req, res) => {
 
     const fileDetail = await File.findOne({
       where: { file_id: fileId, user_id: req.user },
-      attributes: ['file_name', 'file_path']
+      attributes: ['file_name', 'file_path', 'directory_id']
     });
 
     const lastIndex = (fileDetail.file_path).lastIndexOf("\\");
@@ -657,30 +648,33 @@ exports.restoreFileVersion = async (req, res) => {
     const files = await File.findAll({
       where: {
         file_name: fileDetail.file_name,
-        file_path: {
-          [db.Sequelize.Op.like]: `${replacedPath}%`
-        }
+        directory_id: fileDetail.directory_id,
+        user_id: req.user
       }, 
-      // logging: console.log
+    });
+
+    const goalFileVersion = await File.findOne({
+      where: {
+        file_path: fileVersion.file_path,
+        user_id: req.user
+      },
+      attributes: ['file_id']
     });
 
     let allExistingFileIds = files.map(fileIds => fileIds.file_id);
 
-    const index = allExistingFileIds.indexOf(73);
-    if (index !== -1) {
-      allExistingFileIds.splice(index, 1);
-    }
+    const index = allExistingFileIds.indexOf(goalFileVersion.file_id);
+    allExistingFileIds.splice(index, 1);
 
     await File.update(
       { priority_version: false },
       { where: { file_id: allExistingFileIds }, 
-      // logging: console.log 
     }
     );
 
     await File.update(
       { priority_version: true },
-      { where: { file_id: fileId, user_id: req.user } }
+      { where: { file_id: goalFileVersion.file_id, user_id: req.user } }
     );
 
     // Respond with success message
@@ -760,7 +754,7 @@ exports.getUsageAnalytics = async (req, res) => {
     // Retrieve type of files
     const fileTypesData = await File.findAll({
       attributes: ['file_type', [db.Sequelize.fn('COUNT', 'file_type'), 'count']],
-      where: { user_id: userId },
+      where: { user_id: userId, priority_version: true },
       group: ['file_type']
     });
 
@@ -771,7 +765,7 @@ exports.getUsageAnalytics = async (req, res) => {
 
     const fileAccessFrequencyData = await File.findAll({
       attributes: ['file_name', 'download_count'],
-      where: { user_id: userId },
+      where: { user_id: userId, priority_version: true },
     });
 
     const fileAccessFrequency = {};

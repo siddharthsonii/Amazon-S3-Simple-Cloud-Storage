@@ -23,6 +23,10 @@ module.exports = (sequelize, DataTypes) => {
           key: "directory_id"
         }
       },
+      system_generated_file_name: {
+        type: DataTypes.STRING,
+        allowNull: false
+      },
       file_name: {
         type: DataTypes.STRING,
         allowNull: false,
