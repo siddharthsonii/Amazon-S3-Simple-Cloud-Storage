@@ -3,12 +3,16 @@ This project is a RESTful API for a cloud storage service that allows users to u
 
 ## **Table of Contents**
    - Features
+   - System Design
    - Installation
    - Usage
    - API Endpoints
    - Folder Structure
    - Dependencies
    - Contributing
+
+## **System Design**
+   ![image](https://github.com/siddharthsonii/Amazon-S3-Simple-Cloud-Storage/assets/54449601/aa1976b4-b89e-4c6d-b027-b964ba28a133)
 
 ## **Features**
    - User authentication with JWT tokens
