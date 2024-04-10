@@ -18,8 +18,6 @@ app.get("/", (req, res) => {
   return res.status(200).send("Welcome to Amazon S3: Simple Cloud Storage API");
 });
 
-// app.use("/uploaded-file", express.static("uploads"));
-
 // Routes
 app.use('/api/auth', usersRouter);
 app.use('/api/files', filesRoutes);

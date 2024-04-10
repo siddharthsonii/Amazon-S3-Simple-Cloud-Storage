@@ -31,7 +31,6 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: ''
     }
   },{
-    // Define unique constraint for combination of file_id and user_id
     indexes: [
       {
         unique: true,

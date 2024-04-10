@@ -46,7 +46,6 @@ const upload = multer({
     files: 10, // Maximum 10 files allowed
   },
   fileFilter: function (req, file, cb) {
-    // Custom file filter logic (if needed)
     cb(null, true);
   },
 }).array('files');
@@ -59,19 +58,15 @@ const handleFileUpload = (req, res, next) => {
       if (err.code === 'LIMIT_FILE_COUNT') {
         return res.status(400).json({ success: false, message: 'Cannot upload more than 10 files at once.' });
       }
-      // Handle other Multer errors (if needed)
     } else if (err) {
-      // Handle other errors (if needed)
       console.error(err);
       return res.status(500).json({ success: false, message: 'Internal server error.' });
     }
-    // Proceed to the next middleware if no errors
     next();
   });
 };
 
 // Route for uploading a file to the user's storage space.
-// router.post('/upload', verifyToken, upload.array('files', 10), files.uploadFile);
 router.post('/upload', verifyToken, handleFileUpload, files.uploadFile);
 
 // Route for downloading a file by its ID.

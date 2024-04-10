@@ -19,7 +19,6 @@ var User = db.user;
  */
 exports.uploadFile = async (req, res) => {
   try {
-    // Extract file details from multer's req.file object
     const { folder_name, folder_path } = req.body;
 
     if((!folder_name || folder_name.trim().length == 0) || (!folder_path || folder_path.trim().length == 0)){
@@ -127,7 +126,6 @@ exports.uploadFile = async (req, res) => {
           filesData.push({
             file: uploadedFile,
             fileVersion: newFileVersion
-            // data_url: `http://localhost:3000/uploaded-file/${filename}`
           });
         } else {
           // If no file with the same name exists, upload as a new file
@@ -171,7 +169,6 @@ exports.uploadFile = async (req, res) => {
           filesData.push({
             file: uploadedFile,
             fileVersion: initialFileVersion
-            // data_url: `http://localhost:3000/uploaded-file/${filename}`
           });
         }
       }
@@ -181,7 +178,6 @@ exports.uploadFile = async (req, res) => {
         success: true,
         message: "File uploaded successfully",
         file: filesData
-        // data_url: `http://localhost:3000/uploaded-file/${req.file.filename}`
       });
   
       console.log("File Uploaded Successfully");
