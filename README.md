@@ -2,8 +2,8 @@
 This project is a RESTful API for a cloud storage service that allows users to upload, manage, and share files and directories. It provides various endpoints for handling file and directory operations, user authentication, and permission management.
 
 ## **Table of Contents**
-   - Features
    - System Design
+   - Features
    - Installation
    - Usage
    - API Endpoints
